@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tr('Game Timers')</title>
+  <link rel="icon" type="image/svg+xml" href="resources/icon.svg" />
+
+  <meta name="x-icue-property" content="accentColor"     data-label="tr('Alert Color')"  data-type="color"  data-default="'#e94560'" />
+  <meta name="x-icue-property" content="backgroundColor" data-label="tr('Background')"   data-type="color"  data-default="'#0f0f1a'" />
+  <meta name="x-icue-property" content="transparency"    data-label="tr('Transparency')" data-type="slider" data-default="100" data-min="0" data-max="100" data-step="1" />
+  <meta name="x-icue-property" content="enableSound"     data-label="tr('Sound Alerts')" data-type="slider" data-default="1" data-min="0" data-max="1" data-step="1" />
+
+  <script id="x-icue-groups" type="application/json">
+  [
+    { "title": "tr('Widget Personalization')", "properties": ["accentColor", "backgroundColor", "transparency", "enableSound"] }
+  ]
+  </script>
+
+  <link rel="stylesheet" href="styles/widget.css" />
+</head>
+<body>
+<div class="widget-root">
+  <div class="widget-bg" aria-hidden="true"></div>
+
+  <!-- ── Main view: timer list ── -->
+  <div class="view" id="view-main">
+    <div class="header">
+      <span class="header-title">Game Timers</span>
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-start-all" title="Start / resume all">▶ All</button>
+        <button class="icon-btn" id="btn-pause-all" title="Pause all">⏸ All</button>
+        <button class="icon-btn" id="btn-stop-all"  title="Stop all">⏹ All</button>
+        <button class="icon-btn" id="btn-reset-all" title="Reset all">↺ All</button>
+        <button class="icon-btn" id="btn-presets" title="Presets">★ Presets</button>
+        <button class="icon-btn accent" id="btn-add" title="Add timer">+ Timer</button>
+      </div>
+    </div>
+
+    <div class="timer-list" id="timer-list">
+      <!-- timer cards injected here -->
+    </div>
+
+    <div class="empty-hint" id="empty-hint" style="display:none">
+      <div class="big">⏱</div>
+      <div class="msg">Tap <strong>+ Timer</strong> to add a countdown</div>
+    </div>
+  </div>
+
+  <!-- ── Edit view: add / edit timer ── -->
+  <div class="view edit-view hidden" id="view-edit">
+    <div class="header">
+      <span class="edit-title" id="edit-title">New Timer</span>
+    </div>
+    <div class="edit-fields">
+      <div class="field-group">
+        <div class="field-label">Name</div>
+        <input class="field-input" id="edit-name" type="text" placeholder="e.g. Respawn, Buff, Boss…" maxlength="24" />
+      </div>
+      <div class="field-group">
+        <div class="field-label">Duration</div>
+        <div class="duration-row">
+          <div class="duration-unit">
+            <div class="field-label">Hours</div>
+            <div class="stepper">
+              <button class="step-btn" data-field="hours"   data-dir="-1">−</button>
+              <span   class="step-val" id="val-hours">00</span>
+              <button class="step-btn" data-field="hours"   data-dir="1">+</button>
+            </div>
+          </div>
+          <div class="duration-unit">
+            <div class="field-label">Min</div>
+            <div class="stepper">
+              <button class="step-btn" data-field="minutes" data-dir="-1">−</button>
+              <span   class="step-val" id="val-minutes">00</span>
+              <button class="step-btn" data-field="minutes" data-dir="1">+</button>
+            </div>
+          </div>
+          <div class="duration-unit">
+            <div class="field-label">Sec</div>
+            <div class="stepper">
+              <button class="step-btn" data-field="seconds" data-dir="-1">−</button>
+              <span   class="step-val" id="val-seconds">00</span>
+              <button class="step-btn" data-field="seconds" data-dir="1">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Color</div>
+        <div class="color-row" id="color-row"></div>
+      </div>
+      <div class="options-row">
+        <div class="field-group">
+          <div class="field-label">Loop</div>
+          <button class="toggle-btn" id="edit-loop">↺ Off</button>
+        </div>
+        <div class="field-group wide">
+          <div class="field-label">Warn at</div>
+          <div class="stepper">
+            <button class="step-btn" data-field="warnAt" data-dir="-1">−</button>
+            <span   class="step-val" id="val-warn">Off</span>
+            <button class="step-btn" data-field="warnAt" data-dir="1">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="btn" id="btn-cancel">Cancel</button>
+      <button class="btn" id="btn-save-preset">★ Preset</button>
+      <button class="btn primary" id="btn-save">Save &amp; Start</button>
+    </div>
+  </div>
+
+  <!-- ── Presets view ── -->
+  <div class="view hidden" id="view-presets">
+    <div class="header">
+      <span class="header-title">Presets</span>
+      <button class="icon-btn" id="btn-presets-back">← Back</button>
+    </div>
+    <div class="preset-list" id="preset-list"></div>
+    <div class="empty-hint" id="preset-empty" style="display:none">
+      <div class="big">★</div>
+      <div class="msg">No presets yet — tap <strong>★ Preset</strong> while editing</div>
+    </div>
+  </div>
+
+  <!-- notification banner (injected dynamically) -->
+</div>
+
+<script>
+// ── iCUE bindings ────────────────────────────────────────────────────────────
+icueEvents = {
+  onDataUpdated:     onIcueDataUpdated,
+  onICUEInitialized: onIcueInitialized
+};
+
+function getIcueProperty(name) {
+  if (typeof window !== 'undefined' && Object.prototype.hasOwnProperty.call(window, name)) {
+    const v = window[name]; if (v !== undefined && v !== null && v !== '') return v;
+  }
+  try { return Function('return typeof '+name+' !== "undefined" ? '+name+' : undefined')(); }
+  catch(e) { return undefined; }
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY  = 'icue-timers-v1';
+const PRESETS_KEY  = 'icue-timer-presets-v1';
+const COLOR_PALETTE = ['#e94560','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#94a3b8'];
+const WARN_THRESHOLDS = [60, 30, 10, 5];
+
+let timers      = [];
+let presets     = [];
+let editId      = null;
+let tickHandle  = null;
+let notifHandle = null;
+let editH = 0, editM = 0, editS = 0;
+let editColor  = COLOR_PALETTE[0];
+let editLoop   = false;
+let editWarnAt = 0;
+
+const alerted      = new Set();
+const warnBeeps    = new Map(); // id → Set of thresholds already beeped
+const loopTimeouts = new Map(); // id → setTimeout handle
+
+// ── Persistence ──────────────────────────────────────────────────────────────
+function saveTimers()  { try { localStorage.setItem(STORAGE_KEY,  JSON.stringify(timers));   } catch(e) {} }
+function savePresets() { try { localStorage.setItem(PRESETS_KEY,  JSON.stringify(presets));  } catch(e) {} }
+function loadTimers()  { try { const r = localStorage.getItem(STORAGE_KEY);  if (r) timers  = JSON.parse(r); } catch(e) { timers  = []; } }
+function loadPresets() { try { const r = localStorage.getItem(PRESETS_KEY);  if (r) presets = JSON.parse(r); } catch(e) { presets = []; } }
+
+// ── Timer logic ───────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function timerRemaining(t) {
+  if (!t.startedAt) return t.durationSec;
+  if (t.stoppedAt) {
+    return Math.max(0, t.durationSec - t.elapsed);
+  }
+  const elapsed = t.elapsed + (Date.now() - t.startedAt) / 1000;
+  return Math.max(0, t.durationSec - elapsed);
+}
+
+function timerIsRunning(t) { return !!t.startedAt && !t.stoppedAt; }
+function timerIsExpired(t) { return timerRemaining(t) <= 0; }
+
+function startTimer(t) {
+  if (timerIsRunning(t) || timerIsExpired(t)) return;
+  t.startedAt = Date.now();
+  t.stoppedAt = null;
+  saveTimers();
+}
+function pauseTimer(t) {
+  if (!timerIsRunning(t)) return;
+  const now   = Date.now();
+  t.elapsed  += (now - t.startedAt) / 1000;
+  t.stoppedAt = now;
+  saveTimers();
+}
+function resetTimer(t) {
+  if (loopTimeouts.has(t.id)) { clearTimeout(loopTimeouts.get(t.id)); loopTimeouts.delete(t.id); }
+  warnBeeps.delete(t.id);
+  alerted.delete(t.id);
+  t.startedAt = null;
+  t.stoppedAt = null;
+  t.elapsed   = 0;
+  saveTimers();
+}
+function addTimer(name, durationSec, color, loop, warnAt) {
+  timers.push({ id: uid(), name, durationSec, startedAt: Date.now(), stoppedAt: null, elapsed: 0,
+    color: color || COLOR_PALETTE[0], loop: !!loop, warnAt: warnAt || 0 });
+  saveTimers();
+}
+function removeTimer(id) {
+  const t = timers.find(x => x.id === id);
+  if (t) resetTimer(t);
+  alerted.delete(id);
+  timers = timers.filter(x => x.id !== id);
+  saveTimers();
+}
+function stopAllTimers()   { timers.forEach(t => { resetTimer(t); alerted.delete(t.id); }); }
+function pauseAllTimers()  { timers.forEach(t => { if (timerIsRunning(t)) pauseTimer(t); }); }
+function startAllTimers()  { timers.forEach(t => { if (!timerIsRunning(t) && !timerIsExpired(t)) startTimer(t); }); }
+function resetAllTimers()  { timers.forEach(t => { resetTimer(t); alerted.delete(t.id); }); }
+
+// ── Formatting ────────────────────────────────────────────────────────────────
+function fmt(sec) {
+  sec = Math.ceil(sec);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return audioCtx;
+}
+function beep() {
+  if (Number(getIcueProperty('enableSound')) === 0) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  // Three short ascending beeps
+  const notes = [880, 1100, 1320];
+  notes.forEach((freq, i) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type      = 'sine';
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + i * 0.15;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.25, t + 0.02);
+    gain.gain.linearRampToValueAtTime(0, t + 0.12);
+    osc.start(t);
+    osc.stop(t + 0.13);
+  });
+}
+
+function beepWarn() {
+  if (Number(getIcueProperty('enableSound')) === 0) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine'; osc.frequency.value = 660;
+  const t = ctx.currentTime;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+  gain.gain.linearRampToValueAtTime(0, t + 0.1);
+  osc.start(t); osc.stop(t + 0.11);
+}
+
+function maybeWarnBeep(t) {
+  if (!timerIsRunning(t) || timerIsExpired(t)) return;
+  const rem = timerRemaining(t);
+  if (!warnBeeps.has(t.id)) warnBeeps.set(t.id, new Set());
+  const fired = warnBeeps.get(t.id);
+  let beeped = false;
+  for (const th of WARN_THRESHOLDS) {
+    if (rem <= th && !fired.has(th) && t.durationSec > th) {
+      fired.add(th);
+      if (!beeped) { beepWarn(); beeped = true; }
+    }
+  }
+}
+
+function maybeLoop(t) {
+  if (!t.loop || !timerIsExpired(t) || loopTimeouts.has(t.id)) return;
+  loopTimeouts.set(t.id, setTimeout(() => {
+    loopTimeouts.delete(t.id);
+    resetTimer(t); startTimer(t);
+  }, 2000));
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+function maybeAlert(t) {
+  if (!alerted.has(t.id) && timerIsExpired(t)) {
+    alerted.add(t.id);
+    beep();
+    showNotif("⏰ " + t.name + " — Time’s up!");
+  }
+}
+
+function showNotif(msg) {
+  if (notifHandle) { clearTimeout(notifHandle); document.querySelector('.notif-banner')?.remove(); }
+  const el = document.createElement('div');
+  el.className = 'notif-banner';
+  el.textContent = msg;
+  document.querySelector('.widget-root').appendChild(el);
+  notifHandle = setTimeout(() => { el.remove(); notifHandle = null; }, 4000);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderTimers() {
+  const list  = document.getElementById('timer-list');
+  const empty = document.getElementById('empty-hint');
+
+  if (!timers.length) {
+    list.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Update existing cards or build new ones
+  const existing = new Map([...list.querySelectorAll('.timer-card')].map(el => [el.dataset.id, el]));
+  const ids = new Set(timers.map(t => t.id));
+
+  // Remove stale cards
+  for (const [id, el] of existing) { if (!ids.has(id)) el.remove(); }
+
+  timers.forEach((t, i) => {
+    const rem     = timerRemaining(t);
+    const pct     = t.durationSec > 0 ? Math.max(0, (rem / t.durationSec) * 100) : 0;
+    const expired = timerIsExpired(t);
+    const running = timerIsRunning(t);
+    const warn    = !expired && running && t.warnAt > 0 && rem <= t.warnAt;
+    const state   = expired ? 'expired' : warn ? 'warn' : running ? 'running' : '';
+
+    const mainBtn = running
+      ? `<button class="card-btn-primary" data-action="pause" data-id="${t.id}">⏸  Pause</button>`
+      : `<button class="card-btn-primary" data-action="start" data-id="${t.id}">▶  Start</button>`;
+    const stopBtn = running
+      ? `<button class="card-btn-primary card-btn-stop" data-action="reset" data-id="${t.id}">⏹  Stop</button>`
+      : '';
+    const resetBtn = !running ? `<button class="card-btn-sm" data-action="reset" data-id="${t.id}">↺</button>` : '';
+
+    let card = existing.get(t.id);
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'timer-card';
+      card.dataset.id = t.id;
+      // Insert at correct position
+      const after = list.children[i - 1] || null;
+      list.insertBefore(card, after ? after.nextSibling : list.firstChild);
+    }
+
+    card.className = `timer-card ${state}`;
+    card.dataset.expired = expired ? '1' : '';
+    card.style.setProperty('--card-color', t.color || COLOR_PALETTE[0]);
+    const loopBadge = t.loop ? `<span class="loop-badge">↺ loop</span>` : '';
+    card.innerHTML = `
+      <div class="card-flash"></div>
+      <div class="card-name">${esc(t.name)}</div>
+      <div class="card-badges">${loopBadge}</div>
+      <div class="card-time">${expired ? 'TIME\'S UP' : fmt(rem)}</div>
+      <div class="card-progress">
+        <div class="card-progress-fill" style="width:${pct}%"></div>
+      </div>
+      ${expired
+        ? `<div class="card-label">tap to reset</div>`
+        : `<div class="card-main-btn">${mainBtn}</div>
+           ${stopBtn ? `<div class="card-main-btn">${stopBtn}</div>` : ''}
+           <div class="card-secondary">
+             ${resetBtn}
+             <button class="card-btn-sm" data-action="edit"   data-id="${t.id}">✎</button>
+             <button class="card-btn-sm danger" data-action="delete" data-id="${t.id}">✕</button>
+           </div>`
+      }
+    `;
+
+    maybeAlert(t);
+    maybeWarnBeep(t);
+    maybeLoop(t);
+  });
+}
+
+// ── Tick ──────────────────────────────────────────────────────────────────────
+function tick() {
+  renderTimers();
+}
+
+function startTick() {
+  if (tickHandle) return;
+  tickHandle = setInterval(tick, 500);
+}
+
+// ── Stepper ───────────────────────────────────────────────────────────────────
+function stepperSet(field, val) {
+  const limits = { hours: [0, 23], minutes: [0, 59], seconds: [0, 59], warnAt: [0, 3600] };
+  const [mn, mx] = limits[field] || [0, 999];
+  val = Math.max(mn, Math.min(mx, val));
+  const pad = v => String(v).padStart(2, '0');
+  if (field === 'hours')   { editH      = val; document.getElementById('val-hours').textContent   = pad(val); }
+  if (field === 'minutes') { editM      = val; document.getElementById('val-minutes').textContent = pad(val); }
+  if (field === 'seconds') { editS      = val; document.getElementById('val-seconds').textContent = pad(val); }
+  if (field === 'warnAt')  { editWarnAt = val; document.getElementById('val-warn').textContent    = val > 0 ? fmt(val) : 'Off'; }
+}
+
+function setEditColor(color) {
+  editColor = color;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('active', s.dataset.color === color));
+}
+
+function buildColorSwatches() {
+  const row = document.getElementById('color-row');
+  row.innerHTML = COLOR_PALETTE.map(c =>
+    `<div class="color-swatch${c === editColor ? ' active' : ''}" data-color="${c}" style="background:${c}"></div>`
+  ).join('');
+}
+
+function setEditLoop(on) {
+  editLoop = on;
+  const btn = document.getElementById('edit-loop');
+  btn.textContent = on ? '↺ On' : '↺ Off';
+  btn.classList.toggle('active', on);
+}
+
+// ── Views ─────────────────────────────────────────────────────────────────────
+function showMain() {
+  document.getElementById('view-main').classList.remove('hidden');
+  document.getElementById('view-edit').classList.add('hidden');
+  document.getElementById('view-presets').classList.add('hidden');
+  renderTimers();
+}
+
+function showEdit(id) {
+  editId = id || null;
+  const t = id ? timers.find(x => x.id === id) : null;
+
+  document.getElementById('edit-title').textContent = t ? 'Edit Timer' : 'New Timer';
+  document.getElementById('edit-name').value = t ? t.name : '';
+
+  const dur = t ? t.durationSec : 0;
+  stepperSet('hours',   Math.floor(dur / 3600));
+  stepperSet('minutes', Math.floor((dur % 3600) / 60));
+  stepperSet('seconds', dur % 60);
+  stepperSet('warnAt',  t ? (t.warnAt || 0) : 0);
+  setEditColor(t ? (t.color || COLOR_PALETTE[0]) : COLOR_PALETTE[0]);
+  setEditLoop(t ? !!t.loop : false);
+  buildColorSwatches();
+
+  document.getElementById('view-main').classList.add('hidden');
+  document.getElementById('view-presets').classList.add('hidden');
+  document.getElementById('view-edit').classList.remove('hidden');
+  document.getElementById('edit-name').focus();
+}
+
+function showPresets() {
+  document.getElementById('view-main').classList.add('hidden');
+  document.getElementById('view-edit').classList.add('hidden');
+  document.getElementById('view-presets').classList.remove('hidden');
+  renderPresets();
+}
+
+// ── Save edit ─────────────────────────────────────────────────────────────────
+function saveEdit() {
+  const name = document.getElementById('edit-name').value.trim() || 'Timer';
+  const dur  = editH * 3600 + editM * 60 + editS;
+  if (dur <= 0) { stepperSet('minutes', 1); return; }
+
+  if (editId) {
+    const t = timers.find(x => x.id === editId);
+    if (t) {
+      t.name = name; t.durationSec = dur;
+      t.color = editColor; t.loop = editLoop; t.warnAt = editWarnAt;
+      resetTimer(t); startTimer(t);
+    }
+  } else {
+    addTimer(name, dur, editColor, editLoop, editWarnAt);
+  }
+  showMain();
+}
+
+function saveAsPreset() {
+  const name = document.getElementById('edit-name').value.trim() || 'Timer';
+  const dur  = editH * 3600 + editM * 60 + editS;
+  if (dur <= 0) return;
+  presets.push({ id: uid(), name, durationSec: dur, color: editColor, loop: editLoop, warnAt: editWarnAt });
+  savePresets();
+  showNotif('★ Preset saved: ' + name);
+}
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+function renderPresets() {
+  const list  = document.getElementById('preset-list');
+  const empty = document.getElementById('preset-empty');
+  if (!presets.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = presets.map(p => `
+    <div class="preset-row">
+      <div class="preset-dot" style="background:${esc(p.color || COLOR_PALETTE[0])}"></div>
+      <div class="preset-info">
+        <div class="preset-name">${esc(p.name)}</div>
+        <div class="preset-meta">${fmt(p.durationSec)}${p.loop ? ' · ↺ loop' : ''}${p.warnAt ? ' · warn ' + fmt(p.warnAt) : ''}</div>
+      </div>
+      <button class="btn primary" data-preset-action="use"    data-preset-id="${p.id}">+ Use</button>
+      <button class="btn"         data-preset-action="delete" data-preset-id="${p.id}">✕</button>
+    </div>
+  `).join('');
+}
+
+document.getElementById('preset-list').addEventListener('click', e => {
+  const btn = e.target.closest('[data-preset-action]');
+  if (!btn) return;
+  const id = btn.dataset.presetId;
+  if (btn.dataset.presetAction === 'delete') {
+    presets = presets.filter(p => p.id !== id); savePresets(); renderPresets();
+  } else {
+    const p = presets.find(x => x.id === id);
+    if (p) { addTimer(p.name, p.durationSec, p.color, p.loop, p.warnAt); showMain(); }
+  }
+});
+
+// ── Event delegation ──────────────────────────────────────────────────────────
+document.getElementById('timer-list').addEventListener('click', e => {
+  const btn  = e.target.closest('[data-action]');
+  const card = e.target.closest('.timer-card');
+
+  if (btn) {
+    const id = btn.dataset.id;
+    const t  = timers.find(x => x.id === id);
+    if (!t) return;
+    switch (btn.dataset.action) {
+      case 'start':  startTimer(t);   renderTimers(); break;
+      case 'pause':  pauseTimer(t);   renderTimers(); break;
+      case 'reset':  resetTimer(t);   alerted.delete(id); renderTimers(); break;
+      case 'edit':   pauseTimer(t);   showEdit(id);   break;
+      case 'delete': removeTimer(id); renderTimers(); break;
+    }
+    return;
+  }
+
+  // Tap anywhere on an expired card to reset it
+  if (card && card.dataset.expired === '1') {
+    const t = timers.find(x => x.id === card.dataset.id);
+    if (t) { resetTimer(t); alerted.delete(t.id); renderTimers(); }
+  }
+});
+
+document.getElementById('btn-add').addEventListener('click',       () => showEdit(null));
+document.getElementById('btn-presets').addEventListener('click',   () => showPresets());
+document.getElementById('btn-presets-back').addEventListener('click', () => showMain());
+document.getElementById('btn-start-all').addEventListener('click', () => { startAllTimers(); renderTimers(); });
+document.getElementById('btn-pause-all').addEventListener('click', () => { pauseAllTimers(); renderTimers(); });
+document.getElementById('btn-stop-all').addEventListener('click',  () => { stopAllTimers();  renderTimers(); });
+document.getElementById('btn-reset-all').addEventListener('click', () => { resetAllTimers(); renderTimers(); });
+document.getElementById('btn-cancel').addEventListener('click',    () => showMain());
+document.getElementById('btn-save').addEventListener('click',      () => saveEdit());
+document.getElementById('btn-save-preset').addEventListener('click', () => saveAsPreset());
+document.getElementById('edit-loop').addEventListener('click',     () => setEditLoop(!editLoop));
+
+// Stepper + color swatch clicks inside edit view
+document.getElementById('view-edit').addEventListener('click', e => {
+  const btn = e.target.closest('.step-btn');
+  if (btn) {
+    const field = btn.dataset.field;
+    const dir   = parseInt(btn.dataset.dir, 10);
+    const cur   = field === 'hours' ? editH : field === 'minutes' ? editM : field === 'seconds' ? editS : editWarnAt;
+    stepperSet(field, cur + dir);
+    return;
+  }
+  const swatch = e.target.closest('.color-swatch');
+  if (swatch) setEditColor(swatch.dataset.color);
+});
+
+// Allow Enter key to save
+document.getElementById('view-edit').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveEdit();
+  if (e.key === 'Escape') showMain();
+});
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+function applyStyles() {
+  const root = document.documentElement;
+  root.style.setProperty('--accent-color', getIcueProperty('accentColor')     || '#e94560');
+  root.style.setProperty('--bg-color',     getIcueProperty('backgroundColor') || '#0f0f1a');
+  const trans = getIcueProperty('transparency');
+  root.style.setProperty('--bg-opacity', ((trans !== undefined && trans !== null && trans !== '') ? Number(trans) : 100) / 100);
+}
+
+// ── iCUE hooks ────────────────────────────────────────────────────────────────
+function onIcueDataUpdated() { applyStyles(); }
+function onIcueInitialized()  { applyStyles(); init(); }
+
+function init() {
+  loadTimers();
+  loadPresets();
+  showMain();
+  startTick();
+}
+
+if (typeof iCUE_initialized === 'undefined' || !iCUE_initialized) {
+  init(); // standalone / dev preview — iCUE host fires onICUEInitialized via icueEvents
+}
+</script>
+</body>
+</html>

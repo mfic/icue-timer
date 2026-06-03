@@ -1,0 +1,4 @@
+dist/
+*.icuewidget
+.DS_Store
+Thumbs.db

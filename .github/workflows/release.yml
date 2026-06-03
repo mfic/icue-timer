@@ -1,0 +1,37 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp version into manifest
+        run: |
+          sed -i 's/"version": "[^"]*"/"version": "${{ steps.ver.outputs.version }}"/' src/manifest.json
+
+      - name: Build .icuewidget
+        run: |
+          mkdir -p dist
+          cd src && zip -r ../dist/timer.icuewidget .
+          echo "Built $(du -sh ../dist/timer.icuewidget | cut -f1) — dist/timer.icuewidget"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Game Timers v${{ steps.ver.outputs.version }}"
+          files: dist/timer.icuewidget
+          generate_release_notes: true
+          fail_on_unmatched_files: true
