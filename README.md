@@ -14,12 +14,13 @@ Multiple named countdown timers for the **Corsair XENEON EDGE** and other iCUE L
 
 | Feature | Description |
 |---|---|
-| **Multiple timers** | Add as many timers as you need, side-by-side on the display |
+| **Multiple timers** | Add as many timers as you need; layout adapts automatically to count |
 | **Named timers** | Each timer has a custom name (up to 24 characters) |
 | **Color tags** | Pick one of 8 colors per timer for instant visual identification |
+| **Color filter** | Tap a color dot to show only timers of that category (food, buffs, etc.) |
 | **Loop mode** | Timer auto-restarts 2 seconds after expiry — great for recurring events |
 | **Warning threshold** | Card turns amber when remaining time falls below a configurable threshold |
-| **Expiry alert** | Card flashes red + triple ascending beep when time is up |
+| **Expiry alert** | Card flashes + triple ascending beep when time is up |
 | **Countdown beeps** | Single beep at 60 s, 30 s, 10 s, and 5 s remaining |
 | **Presets** | Save frequently used timer configs and spawn them in one tap |
 | **Persistent** | Timers survive iCUE restarts — state is stored locally |
@@ -41,15 +42,37 @@ Tap **★ Preset** before saving to store the config for reuse. Access presets v
 
 ### Timer card controls
 
-| Button | Action |
+Tap anywhere on the card face to **start or pause** the timer.
+
+| Control | Action |
 |---|---|
-| **▶ Start** | Start or resume the timer |
-| **⏸ Pause** | Pause without resetting |
-| **⏹ Stop** | Stop and reset to full duration |
-| ↺ | Reset to full duration (visible when paused) |
-| ✎ | Edit name, duration, color, loop and warn settings |
-| ✕ | Delete the timer |
-| *Tap expired card* | Reset a "TIME'S UP" card with one tap |
+| *Tap card* | Start if idle / Pause if running |
+| *Tap expired card* | Reset a "TIME'S UP" card |
+| **⋯** | Open action menu (top-right corner of each card) |
+
+Tapping **⋯** opens an overlay with three actions:
+
+| Menu item | Action |
+|---|---|
+| **↺ Reset** | Stop and reset to full duration |
+| **✎ Edit** | Pause and open the editor |
+| **✕ Delete** | Remove the timer |
+
+Dismiss the menu by tapping anywhere on the card, tapping **⋯** again, or tapping anywhere outside the timer list.
+
+### Adaptive layout
+
+The timer list automatically adjusts its layout based on how many timers are active:
+
+| Timer count | Layout |
+|---|---|
+| 1 – 2 | Large cards, side by side |
+| 3 – 4 | 2 × 2 grid |
+| 5 + | Compact horizontal rows, scrollable |
+
+### Color filter
+
+When timers have two or more different colors, a row of colored dots appears below the header. Tap a dot to show only timers of that color — useful for grouping by category (food, buffs, cooldowns). Tap the active dot again to clear the filter.
 
 ### Global controls (header)
 
