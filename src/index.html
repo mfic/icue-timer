@@ -30,7 +30,6 @@
       <div class="header-actions">
         <button class="icon-btn" id="btn-start-all" title="Start / resume all">▶ All</button>
         <button class="icon-btn" id="btn-pause-all" title="Pause all">⏸ All</button>
-        <button class="icon-btn" id="btn-stop-all"  title="Stop all">⏹ All</button>
         <button class="icon-btn" id="btn-reset-all" title="Reset all">↺ All</button>
         <button class="icon-btn" id="btn-presets" title="Presets">★ Presets</button>
         <button class="icon-btn accent" id="btn-add" title="Add timer">+ Timer</button>
@@ -222,7 +221,6 @@ function removeTimer(id) {
   timers = timers.filter(x => x.id !== id);
   saveTimers();
 }
-function stopAllTimers()   { timers.forEach(t => { resetTimer(t); alerted.delete(t.id); }); }
 function pauseAllTimers()  { timers.forEach(t => { if (timerIsRunning(t)) pauseTimer(t); }); }
 function startAllTimers()  { timers.forEach(t => { if (!timerIsRunning(t) && !timerIsExpired(t)) startTimer(t); }); }
 function resetAllTimers()  { timers.forEach(t => { resetTimer(t); alerted.delete(t.id); }); }
@@ -623,7 +621,6 @@ document.getElementById('btn-presets').addEventListener('click',   () => showPre
 document.getElementById('btn-presets-back').addEventListener('click', () => showMain());
 document.getElementById('btn-start-all').addEventListener('click', () => { startAllTimers(); renderTimers(); });
 document.getElementById('btn-pause-all').addEventListener('click', () => { pauseAllTimers(); renderTimers(); });
-document.getElementById('btn-stop-all').addEventListener('click',  () => { stopAllTimers();  renderTimers(); });
 document.getElementById('btn-reset-all').addEventListener('click', () => { resetAllTimers(); renderTimers(); });
 document.getElementById('btn-cancel').addEventListener('click',    () => showMain());
 document.getElementById('btn-save').addEventListener('click',      () => saveEdit());

@@ -80,7 +80,6 @@ When timers have two or more different colors, a row of colored dots appears bel
 |---|---|
 | **▶ All** | Start / resume all non-expired timers |
 | **⏸ All** | Pause all running timers |
-| **⏹ All** | Stop and reset all timers |
 | **↺ All** | Reset all timers to full duration |
 
 ### iCUE settings
