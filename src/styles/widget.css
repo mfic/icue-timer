@@ -81,10 +81,11 @@ body {
   border-radius: calc(var(--layout-unit) * 1.5);
   color: var(--text-color);
   font-size: var(--font-btn);
-  padding: calc(var(--layout-unit) * .8) calc(var(--layout-unit) * 1.8);
+  padding: calc(var(--layout-unit) * 1.6) calc(var(--layout-unit) * 2.2);
   cursor: pointer;
   transition: background .15s;
   line-height: 1;
+  white-space: nowrap;
 }
 .icon-btn:hover  { background: rgba(255,255,255,.16); }
 .icon-btn:active { background: rgba(255,255,255,.24); }
@@ -93,6 +94,27 @@ body {
   border-color: transparent;
 }
 .icon-btn.accent:hover { filter: brightness(1.15); }
+
+/* ── Color filter bar ────────────────────────────────────── */
+.color-filter-bar {
+  display: flex;
+  gap: calc(var(--layout-unit) * 1.5);
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 calc(var(--layout-unit) * .5);
+}
+.cf-dot {
+  width:  calc(var(--layout-unit) * 5);
+  height: calc(var(--layout-unit) * 5);
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s, border-color .15s;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.cf-dot:hover  { transform: scale(1.2); }
+.cf-dot.active { border-color: #fff; transform: scale(1.15); }
 
 /* ── Timer list ──────────────────────────────────────────── */
 .timer-list {
@@ -220,7 +242,7 @@ body {
   color: var(--text-color);
   font-size: var(--font-name);
   font-weight: 600;
-  padding: calc(var(--layout-unit) * 2) 0;
+  padding: calc(var(--layout-unit) * 2.8) 0;
   cursor: pointer;
   transition: background .15s;
   font-family: inherit;
@@ -234,7 +256,7 @@ body {
   background: rgba(255,255,255,.05);
   border-color: rgba(255,255,255,.15);
   font-size: var(--font-label);
-  padding: calc(var(--layout-unit) * 1.4) 0;
+  padding: calc(var(--layout-unit) * 2.2) 0;
 }
 .card-btn-stop:hover  { background: rgba(255,255,255,.12) !important; border-color: var(--card-color); }
 .card-btn-stop:active { background: rgba(255,255,255,.2)  !important; }
@@ -251,7 +273,7 @@ body {
   border-radius: calc(var(--layout-unit) * 1.2);
   color: var(--text-color);
   font-size: var(--font-label);
-  padding: calc(var(--layout-unit) * 1) 0;
+  padding: calc(var(--layout-unit) * 2) 0;
   cursor: pointer;
   transition: background .15s;
   font-family: inherit;

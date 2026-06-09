@@ -19,9 +19,9 @@ build:
 
 package:
     mkdir -p {{dist_dir}}
-    docker run --rm \
-        -v "{{justfile_directory()}}/src:/widget" \
-        -v "{{justfile_directory()}}/{{dist_dir}}:/output" \
+    MSYS_NO_PATHCONV=1 docker run --rm \
+        -v "$(pwd)/src:/widget" \
+        -v "$(pwd)/{{dist_dir}}:/output" \
         -e WIDGET_NAME={{widget_name}} \
         icue-packager:latest
 
