@@ -556,6 +556,7 @@ document.getElementById('preset-list').addEventListener('click', e => {
 
 // ── Event delegation ──────────────────────────────────────────────────────────
 document.getElementById('timer-list').addEventListener('click', e => {
+  e.stopPropagation();
   const card = e.target.closest('.timer-card');
   if (!card) return;
   const id = card.dataset.id;
