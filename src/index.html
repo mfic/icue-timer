@@ -585,15 +585,27 @@ document.getElementById('timer-list').addEventListener('click', e => {
     return;
   }
 
-  // Tap on card body — expired: reset; running: pause; paused/idle: start
+  // Tap on card body — expired: reset; menu open: dismiss; else: start/pause
   if (card.dataset.expired === '1') {
     resetTimer(t); alerted.delete(id); renderTimers();
     return;
   }
-  if (menuOpenId !== null && menuOpenId !== id) { menuOpenId = null; }
+  if (menuOpenId !== null) {
+    menuOpenId = null;
+    renderTimers();
+    return;
+  }
   if (timerIsRunning(t)) pauseTimer(t);
   else if (!timerIsExpired(t)) startTimer(t);
   renderTimers();
+});
+
+// Close menu when tapping outside the timer list (e.g. header area)
+document.addEventListener('click', e => {
+  if (menuOpenId !== null && !e.target.closest('#timer-list')) {
+    menuOpenId = null;
+    renderTimers();
+  }
 });
 
 document.getElementById('color-filter-bar').addEventListener('click', e => {
