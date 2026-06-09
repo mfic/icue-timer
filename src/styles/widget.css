@@ -122,18 +122,74 @@ body {
   display: flex;
   flex-direction: row;
   gap: var(--space-gap);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   align-items: stretch;
   scrollbar-width: none;
 }
 .timer-list::-webkit-scrollbar { display: none; }
 
+/* ── Timer list density modes ────────────────────────────── */
+.timer-list.density-normal {
+  overflow-x: auto;
+}
+.timer-list.density-normal .timer-card {
+  flex: 1;
+}
+.timer-list.density-grid {
+  flex-wrap: wrap;
+  overflow-x: hidden;
+  align-content: flex-start;
+}
+.timer-list.density-grid .timer-card {
+  flex: 0 0 calc(50% - var(--space-gap) * .5);
+  min-width: 0;
+}
+.timer-list.density-compact {
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.timer-list.density-compact .timer-card {
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  padding: calc(var(--layout-unit) * 1.5) calc(var(--layout-unit) * 2);
+  gap: calc(var(--layout-unit) * 2);
+  min-height: calc(var(--layout-unit) * 11);
+}
+.timer-list.density-compact .card-name {
+  flex: 1;
+  text-align: left;
+  font-size: var(--font-label);
+}
+.timer-list.density-compact .card-time {
+  font-size: calc(var(--layout-unit) * 6);
+  flex-shrink: 0;
+}
+.timer-list.density-compact .card-badges,
+.timer-list.density-compact .card-state-label {
+  display: none;
+}
+.timer-list.density-compact .card-progress {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--layout-unit) * .6);
+  border-radius: 0;
+  background: rgba(255,255,255,.08);
+}
+.timer-list.density-compact .card-menu-btn {
+  position: static;
+  flex-shrink: 0;
+  width:  calc(var(--layout-unit) * 7);
+  height: calc(var(--layout-unit) * 7);
+}
+.timer-list.density-compact .card-menu-overlay {
+  flex-direction: row;
+}
+
 /* ── Timer card ──────────────────────────────────────────── */
 .timer-card {
   --card-color: var(--accent-color);
-  flex: 0 0 calc(25% - var(--space-gap) * .75);
-  min-width: calc(var(--layout-unit) * 28);
   background: rgba(255,255,255,.06);
   border: 1.5px solid rgba(255,255,255,.12);
   border-radius: var(--radius-card);
@@ -288,6 +344,68 @@ body {
   font-size: var(--font-label);
   opacity: .5;
 }
+
+.card-state-label {
+  font-size: var(--font-label);
+  opacity: .4;
+}
+
+/* ── Card ⋯ menu button ──────────────────────────────────── */
+.card-menu-btn {
+  position: absolute;
+  top:   calc(var(--layout-unit) * 1);
+  right: calc(var(--layout-unit) * 1);
+  width:  calc(var(--layout-unit) * 5.5);
+  height: calc(var(--layout-unit) * 5.5);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: calc(var(--layout-unit) * 1.2);
+  color: var(--text-color);
+  font-size: calc(var(--layout-unit) * 3.5);
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  line-height: 1;
+  padding: 0;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.card-menu-btn:hover  { background: rgba(255,255,255,.18); }
+.card-menu-btn:active { background: rgba(255,255,255,.28); }
+
+/* ── Card menu overlay ───────────────────────────────────── */
+.card-menu-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10,10,22,.9);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  z-index: 3;
+  padding: calc(var(--layout-unit) * 1.5);
+  gap: calc(var(--layout-unit) * 1.2);
+}
+.card-menu-item {
+  flex: 1;
+  background: rgba(255,255,255,.1);
+  border: 1.5px solid rgba(255,255,255,.2);
+  border-radius: calc(var(--layout-unit) * 1.5);
+  color: var(--text-color);
+  font-size: var(--font-label);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s;
+  line-height: 1;
+  padding: 0;
+}
+.card-menu-item:hover  { background: rgba(255,255,255,.2); }
+.card-menu-item:active { background: rgba(255,255,255,.3); }
+.card-menu-item.danger { border-color: var(--card-color); }
+.card-menu-item.danger:hover { background: var(--card-color); }
 
 /* ── Empty state ─────────────────────────────────────────── */
 .empty-hint {

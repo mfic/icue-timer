@@ -161,6 +161,7 @@ let editColor  = COLOR_PALETTE[0];
 let editLoop   = false;
 let editWarnAt = 0;
 let filterColor = null;
+let menuOpenId  = null;
 
 const alerted      = new Set();
 const warnBeeps    = new Map(); // id → Set of thresholds already beeped
@@ -336,6 +337,12 @@ function renderColorFilter() {
   ).join('');
 }
 
+function getDensity(count) {
+  if (count <= 2) return 'normal';
+  if (count <= 4) return 'grid';
+  return 'compact';
+}
+
 function renderTimers() {
   renderColorFilter();
   const list  = document.getElementById('timer-list');
@@ -357,6 +364,9 @@ function renderTimers() {
   // Remove cards not in current visible set
   for (const [id, el] of existing) { if (!visibleIds.has(id)) el.remove(); }
 
+  const density = getDensity(visible.length);
+  list.className = `timer-list density-${density}`;
+
   visible.forEach((t, i) => {
     const rem     = timerRemaining(t);
     const pct     = t.durationSec > 0 ? Math.max(0, (rem / t.durationSec) * 100) : 0;
@@ -365,20 +375,11 @@ function renderTimers() {
     const warn    = !expired && running && t.warnAt > 0 && rem <= t.warnAt;
     const state   = expired ? 'expired' : warn ? 'warn' : running ? 'running' : '';
 
-    const mainBtn = running
-      ? `<button class="card-btn-primary" data-action="pause" data-id="${t.id}">⏸  Pause</button>`
-      : `<button class="card-btn-primary" data-action="start" data-id="${t.id}">▶  Start</button>`;
-    const stopBtn = running
-      ? `<button class="card-btn-primary card-btn-stop" data-action="reset" data-id="${t.id}">⏹  Stop</button>`
-      : '';
-    const resetBtn = !running ? `<button class="card-btn-sm" data-action="reset" data-id="${t.id}">↺</button>` : '';
-
     let card = existing.get(t.id);
     if (!card) {
       card = document.createElement('div');
       card.className = 'timer-card';
       card.dataset.id = t.id;
-      // Insert at correct position
       const after = list.children[i - 1] || null;
       list.insertBefore(card, after ? after.nextSibling : list.firstChild);
     }
@@ -386,25 +387,27 @@ function renderTimers() {
     card.className = `timer-card ${state}`;
     card.dataset.expired = expired ? '1' : '';
     card.style.setProperty('--card-color', t.color || COLOR_PALETTE[0]);
-    const loopBadge = t.loop ? `<span class="loop-badge">↺ loop</span>` : '';
+
+    const loopBadge  = t.loop ? `<span class="loop-badge">↺ loop</span>` : '';
+    const stateLabel = expired ? '' : !t.startedAt ? 'Tap to start' : t.stoppedAt ? '⏸ Paused' : '';
+    const isMenuOpen = menuOpenId === t.id;
+
     card.innerHTML = `
       <div class="card-flash"></div>
+      <button class="card-menu-btn" data-action="menu" data-id="${t.id}">⋯</button>
       <div class="card-name">${esc(t.name)}</div>
       <div class="card-badges">${loopBadge}</div>
       <div class="card-time">${expired ? 'TIME\'S UP' : fmt(rem)}</div>
       <div class="card-progress">
         <div class="card-progress-fill" style="width:${pct}%"></div>
       </div>
-      ${expired
-        ? `<div class="card-label">tap to reset</div>`
-        : `<div class="card-main-btn">${mainBtn}</div>
-           ${stopBtn ? `<div class="card-main-btn">${stopBtn}</div>` : ''}
-           <div class="card-secondary">
-             ${resetBtn}
-             <button class="card-btn-sm" data-action="edit"   data-id="${t.id}">✎</button>
-             <button class="card-btn-sm danger" data-action="delete" data-id="${t.id}">✕</button>
-           </div>`
-      }
+      ${stateLabel ? `<div class="card-state-label">${stateLabel}</div>` : ''}
+      ${isMenuOpen ? `
+        <div class="card-menu-overlay">
+          <button class="card-menu-item" data-action="reset"  data-id="${t.id}">↺ Reset</button>
+          <button class="card-menu-item" data-action="edit"   data-id="${t.id}">✎ Edit</button>
+          <button class="card-menu-item danger" data-action="delete" data-id="${t.id}">✕ Delete</button>
+        </div>` : ''}
     `;
 
     maybeAlert(t);
@@ -456,6 +459,7 @@ function setEditLoop(on) {
 
 // ── Views ─────────────────────────────────────────────────────────────────────
 function showMain() {
+  menuOpenId = null;
   document.getElementById('view-main').classList.remove('hidden');
   document.getElementById('view-edit').classList.add('hidden');
   document.getElementById('view-presets').classList.add('hidden');
@@ -552,28 +556,44 @@ document.getElementById('preset-list').addEventListener('click', e => {
 
 // ── Event delegation ──────────────────────────────────────────────────────────
 document.getElementById('timer-list').addEventListener('click', e => {
-  const btn  = e.target.closest('[data-action]');
   const card = e.target.closest('.timer-card');
+  if (!card) return;
+  const id = card.dataset.id;
+  const t  = timers.find(x => x.id === id);
+  if (!t) return;
 
+  const btn = e.target.closest('[data-action]');
   if (btn) {
-    const id = btn.dataset.id;
-    const t  = timers.find(x => x.id === id);
-    if (!t) return;
     switch (btn.dataset.action) {
-      case 'start':  startTimer(t);   renderTimers(); break;
-      case 'pause':  pauseTimer(t);   renderTimers(); break;
-      case 'reset':  resetTimer(t);   alerted.delete(id); renderTimers(); break;
-      case 'edit':   pauseTimer(t);   showEdit(id);   break;
-      case 'delete': removeTimer(id); renderTimers(); break;
+      case 'menu':
+        menuOpenId = (menuOpenId === id) ? null : id;
+        renderTimers();
+        return;
+      case 'reset':
+        menuOpenId = null;
+        resetTimer(t); alerted.delete(id); renderTimers();
+        return;
+      case 'edit':
+        menuOpenId = null;
+        pauseTimer(t); showEdit(id);
+        return;
+      case 'delete':
+        menuOpenId = null;
+        removeTimer(id); renderTimers();
+        return;
     }
     return;
   }
 
-  // Tap anywhere on an expired card to reset it
-  if (card && card.dataset.expired === '1') {
-    const t = timers.find(x => x.id === card.dataset.id);
-    if (t) { resetTimer(t); alerted.delete(t.id); renderTimers(); }
+  // Tap on card body — expired: reset; running: pause; paused/idle: start
+  if (card.dataset.expired === '1') {
+    resetTimer(t); alerted.delete(id); renderTimers();
+    return;
   }
+  if (menuOpenId !== null && menuOpenId !== id) { menuOpenId = null; }
+  if (timerIsRunning(t)) pauseTimer(t);
+  else if (!timerIsExpired(t)) startTimer(t);
+  renderTimers();
 });
 
 document.getElementById('color-filter-bar').addEventListener('click', e => {
